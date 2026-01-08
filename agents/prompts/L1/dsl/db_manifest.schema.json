@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/db_manifest_apply_report.schema.json",
+  "title": "DB Manifest (Wrapper-enforced)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["policy", "theory_schema_name", "manifest_sql", "objects", "apply_status"],
+  "properties": {
+    "policy": { "type": "string", "enum": ["NONE", "VIEWS_ONLY", "VIEWS_PLUS_MATERIALIZED_VIEWS"] },
+    "theory_schema_name": { "type": "string", "maxLength": 128 },
+    "manifest_sql": { "type": "string", "maxLength": 500000 },
+    "objects": {
+      "type": "array",
+      "maxItems": 512,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "depends_on"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 128 },
+          "kind": { "type": "string", "enum": ["VIEW", "MATERIALIZED_VIEW"] },
+          "depends_on": { "type": "array", "maxItems": 64, "items": { "type": "string", "maxLength": 128 } },
+          "notes": { "type": "string", "maxLength": 2000 }
+        }
+      }
+    },
+    "policy_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "no_osmand_writes": { "type": "boolean" },
+        "no_run_tables_for_prediction": { "type": "boolean" },
+        "no_nondeterminism": { "type": "boolean" },
+        "immutable_no_replace": { "type": "boolean" }
+      }
+    },
+    "apply_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["REUSED_EXISTING", "CREATED_NEW", "FAILED"] },
+        "error": { "type": "string", "maxLength": 4000 },
+        "execution_ms": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/evaluator_run.schema.json",
+  "title": "Evaluator Run Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "group_name", "request", "response_aggregates", "derived"],
+  "properties": {
+    "run_id": { "type": ["integer", "string"] },
+    "group_name": { "type": "string", "maxLength": 128 },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "url", "get_with_body", "body_where_suffix"],
+      "properties": {
+        "method": { "type": "string", "enum": ["GET"] },
+        "url": { "type": "string", "maxLength": 512 },
+        "get_with_body": { "type": "boolean", "const": true },
+        "body_where_suffix": { "type": "string", "maxLength": 20000 },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "response_aggregates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "totalCount", "failedCount", "foundCount", "partialFoundCount", "totalDurationMs", "totalBytes", "searchDurationMs"],
+      "properties": {
+        "status": { "type": "string", "enum": ["RUNNING", "COMPLETED", "FAILED"] },
+        "totalCount": { "type": "integer", "minimum": 0 },
+        "failedCount": { "type": "integer", "minimum": 0 },
+        "foundCount": { "type": "integer", "minimum": 0 },
+        "partialFoundCount": { "type": "integer", "minimum": 0 },
+        "totalDurationMs": { "type": "integer", "minimum": 0 },
+        "searchDurationMs": { "type": "integer", "minimum": 0 },
+        "totalBytes": { "type": "integer", "minimum": 0 },
+        "error": { "type": "string", "maxLength": 4000 }
+      }
+    },
+    "derived": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["notFoundCount", "notFoundRate"],
+      "properties": {
+        "notFoundCount": { "type": "integer", "minimum": 0 },
+        "notFoundRate": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

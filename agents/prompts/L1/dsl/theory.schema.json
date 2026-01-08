@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/theory.schema.json",
+  "title": "Theory Artifact (Mechanism Model + Evidence + Surrogate + DB Materialization)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["theory_dsl", "code_evidence", "surrogate_index", "db_materialization"],
+  "properties": {
+    "theory_dsl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "theory_id", "theory_name", "theory_type", "axioms", "scope", "inputs", "features", "model", "validation"],
+      "properties": {
+        "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+        "theory_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "theory_name": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "theory_type": { "type": "string", "enum": ["RULE_MODEL", "SCORING_MODEL", "SQL_RULES", "PIPELINE_MODEL"] },
+        "axioms": { "type": "array", "minItems": 1, "items": { "type": "string", "maxLength": 64 } },
+        "scope": { "type": "object", "additionalProperties": true },
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "source"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+              "source": { "type": "string", "maxLength": 256 },
+              "type": { "type": "string", "enum": ["string", "int", "float", "bool", "json"] },
+              "notes": { "type": "string", "maxLength": 2000 }
+            }
+          }
+        },
+        "features": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["expr", "type"],
+            "properties": {
+              "expr": { "type": "string", "minLength": 1, "maxLength": 20000 },
+              "type": { "type": "string", "enum": ["string", "int", "float", "bool"] },
+              "notes": { "type": "string", "maxLength": 2000 }
+            }
+          }
+        },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["outputs", "logic", "complexity"],
+          "properties": {
+            "outputs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "enum": ["predict_notfound", "predict_reason_family", "risk_score", "candidate_count_est"]
+              }
+            },
+            "logic": { "type": "array", "minItems": 1, "maxItems": 256, "items": { "type": "object", "additionalProperties": true } },
+            "parameters": { "type": "object", "additionalProperties": { "type": ["number", "string", "boolean"] } },
+            "complexity": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["num_features", "num_steps"],
+              "properties": {
+                "num_features": { "type": "integer", "minimum": 1, "maximum": 1024 },
+                "num_steps": { "type": "integer", "minimum": 1, "maximum": 1024 },
+                "description": { "type": "string", "maxLength": 2000 }
+              }
+            }
+          }
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocol", "metrics", "acceptance"],
+          "properties": {
+            "protocol": { "type": "object", "additionalProperties": true },
+            "metrics": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "enum": ["AUC", "F1", "precision", "recall", "brier", "calibration_slope", "topk_lift"] }
+            },
+            "acceptance": { "type": "object", "additionalProperties": true }
+          }
+        },
+        "signatures": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "theory_signature": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    },
+    "code_evidence": { "$ref": "code_evidence.schema.json" },
+    "surrogate_index": { "$ref": "surrogate_index.schema.json" },
+    "db_materialization": { "$ref": "db_manifest_apply_report.schema.json" },
+    "tracing_links": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tracing_plan_ref": { "type": "string", "maxLength": 512 },
+        "tracing_sessions_ref": { "type": "string", "maxLength": 512 }
+      }
+    }
+  }
+}

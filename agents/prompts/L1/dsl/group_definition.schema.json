@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/group_definition.schema.json",
+  "title": "Group Definition (WHERE-suffix or Protocol-defined)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "definition"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9][A-Za-z0-9_\\-]*$" },
+    "definition": {
+      "type": "string",
+      "enum": ["where_sql", "stratified_random_sample", "fixed_holdout_control", "fixed_feature_bin"]
+    },
+    "group_sql": { "type": "string", "minLength": 1, "maxLength": 20000 },
+    "params": { "type": "object", "additionalProperties": true },
+    "group_signature": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "implies": { "type": "array", "maxItems": 64, "items": { "type": "string", "pattern": "^[a-f0-9]{64}$" } },
+    "safety_assertions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "no_semicolons": { "type": "boolean" },
+        "no_comments": { "type": "boolean" },
+        "no_ddl_dml": { "type": "boolean" },
+        "deterministic_only": { "type": "boolean" }
+      }
+    },
+    "notes": { "type": "string", "maxLength": 4000 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "definition": { "const": "where_sql" } }, "required": ["definition"] },
+      "then": { "required": ["group_sql"] }
+    }
+  ]
+}
