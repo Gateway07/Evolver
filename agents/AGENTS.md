@@ -1,32 +1,14 @@
-# AGENTS.md — Codex CLI Constitution (Stable Rules)
+# AGENTS.md — Codex CLI Constitution
 
-This document is the **stable operating constitution** for any CLI LLM agent (Codex CLI now, Claude Code CLI later)
-running inside this repository.  
-It defines **tooling contracts/runbooks**, **safety/policy constraints**, and **signature canonicalization rules**.  
-Anything about **artifact formats**, **task objectives**, **hypothesis DSL schemas**, **scoring**, and **what to output** belongs in the **OpenEvolve prompt** (e.g. `prompts/l1/prompt.md`).
-
----
-
-## 0) Repo map and entry points
-
-### Project roots
-
-- `osmand/` — main Java application code and related modules.
-- `tools/` — Java application code and related modules.
-- `prompts/` — OpenEvolve prompts (L1/L0) and examples.
-
-### Canonical documents
-
-- OpenEvolve prompts live under: `prompts/`
-- Tool skills live under: `skills/`
-- Signature canonicalization utility: `scripts/canonicalize.py` (or equivalent)
-
----
+This document defines **tooling contracts/runbooks**, **safety/policy constraints**, and **signature canonicalization
+rules**, **artifact formats**, **task objectives**, **hypothesis DSL schemas**, **scoring**, and **what to output**.
 
 ## 1) Tooling contracts & runbooks
 
-Agents MUST use tools only through the repository’s tool wrappers (or through the documented skill interfaces). Do not
-“freestyle” direct calls that bypass guardrails.
+Agents MUST use tools only through the documented skill interfaces. Do not “freestyle” direct calls that bypass
+guardrails.
+
+### 1.0 pwsh (PowerShell 7.5.4) - use PowerShell as main shell tool.
 
 ### 1.1 curl.exe — [curl skill](skills/curl/SKILL.md)
 
@@ -36,19 +18,88 @@ Agents MUST use tools only through the repository’s tool wrappers (or through 
 
 #### Contract
 
-- The orchestrator (OpenEvolve/OptiLLM) provides:
-    - the current prompt file path (e.g., `prompts/l1/prompt.md`)
-    - run config (thresholds, topK, repeats, holdout split)
-    - locations for output artifacts (`artifacts/...`)
-- The agent must:
-    - load and follow this `AGENTS.md` first
-    - then follow the OpenEvolve prompt for the current task
+- The orchestrator (OpenEvolve) provides:
+    - the more specific prompt [open_evolve_prompt.md](prompts/open_evolve_prompt.md) which you should follow mandatory.
+    - locations for output artifacts (`artifacts/...`).
+- The agent must follow the OpenEvolve prompt for the current task.
 
-#### Runbook: Swapping CLI clients
+### 1.4 Signature tool for Agent usage
 
-- Tooling invocation MUST be independent of the LLM client:
-    - all system actions go through wrappers/skills
-- The agent’s role is planning + emitting tool calls + producing output artifacts as specified by the OpenEvolve prompt.
+All signatures MUST be computed by the wrapper (not by the LLM). Use the repository tool:
+
+- `agents/scripts/signature_tool.py`
+
+Usage:
+
+- JSON DSL (hypothesis_dsl, theory_dsl):
+    - `python agents/scripts/signature_tool.py json --file path/to/dsl.json`
+    - Or pipe: `type path\to\dsl.json | python agents/scripts/signature_tool.py json`
+- SQL WHERE-suffix (group_sql):
+    - `python agents/scripts/signature_tool.py sql --file path/to/group_sql.txt --uppercase-keywords`
+    - Or pipe: `type path\to\group_sql.txt | python agents/scripts/signature_tool.py sql --uppercase-keywords`
+
+The tool prints the signature hex digest by default. Use `--print-canonical` to emit both the digest and canonical form.
+
+### 1.5 Stateless execution + artifact continuity contract
+
+The CLI agent MUST implement the following artifact contract in Continuity Ledger (compaction-safe) style.
+Maintain a single Continuity Ledger for this workspace in [CONTINUITY.md](prompts/CONTINUITY.md). The ledger is the
+canonical session briefing designed to survive stateful context compaction; do not rely on earlier chat text unless it’s
+reflected in the ledger.
+
+Ledger artifacts versioning storage:
+
+- Use per-version folders: `artifacts/<version_id>/FACTS.diff`
+- Append-only registry with small state summary per <version_id>: `artifacts/registry.json`
+
+#### How the ledger works
+
+- At the start of every assistant turn: read CONTINUITY.md, update it to reflect the latest
+  goal/constraints/decisions/state, then proceed with the work.
+- Update CONTINUITY.md again whenever any of these change: goal, constraints/assumptions, key decisions, progress
+  state (Done/Now/Next), or important tool outcomes.
+- Keep it short and stable: facts only, no transcripts. Prefer bullets. Mark uncertainty as UNCONFIRMED (never guess).
+- If you notice missing recall or a compaction/summary event: refresh/rebuild the ledger from visible context, mark
+  gaps AGENTS.md ask up to 1–3 targeted questions, then continue.
+- CONTINUITY.md is for long-running continuity across compaction (the “what/why/current state”), not a step-by-step task
+  list.
+- Keep them consistent: when the plan or state changes, update the ledger at the intent/progress level (not every
+  micro-step).
+
+#### How versioning works
+
+Use a separate “ledger versioning” mechanism when you need to change established facts/decisions in a way that should be
+auditable over time (as opposed to routine progress updates).
+
+- If some part of `CONTINUITY.md` needs changes in a versioning context, record the change as a facts diff artifact:
+    - Create a new per-version folder: `artifacts/<version_id>/`
+    - Write a single file: `artifacts/<version_id>/FACTS.diff`
+
+`FACTS.diff` is Git diff format file to show difference between new and old version of changed CONTINUITY.md parts.
+
+Maintain an append-only registry entry per `version_id` in `artifacts/registry.json`. Each entry should include:
+
+- `version_id`
+- `timestamp_utc`
+- `author` (e.g., `assistant`, `user`)
+- `facts_diff_path` (points to `artifacts/<version_id>/FACTS.diff`)
+- `summary` (1–3 lines) is a short, human-readable summary of what changed in the ledger and why. Use bullet points.
+  Reference the affected ledger section(s) (e.g., “Key decisions”, “Constraints/Assumptions”).
+  Include the reason and any supporting evidence pointers (file paths, artifact paths, run ids).
+
+#### In replies
+
+- Begin with a brief “Ledger Snapshot” (Goal + Now/Next + Open Questions). Print the full ledger only when it materially
+  changes or when the user asks.
+
+#### CONTINUITY.md format (keep headings)
+
+- Goal (incl. success criteria):
+- Constraints/Assumptions:
+- Key decisions:
+- State/Done/Now/Next:
+- Open questions (UNCONFIRMED if needed):
+- Working set (files/ids/commands):
 
 ---
 
@@ -131,86 +182,3 @@ DB writes are allowed only under ALL these conditions:
     - feature stats (token/prefix counts)
     - stratified sampling sets
     - aggregation of `run_result` to compute metrics (when allowed by prompt)
-
----
-
-## 3) Signature canonicalization rules
-
-All signatures MUST be computed by the **wrapper** (not by the LLM).  
-Signature algorithm: `sha256(canonical_form)`.
-
-### 3.1 Canonicalization for JSON DSL
-
-Used for:
-
-- `hypothesis_dsl`
-- `theory_dsl` (mechanism model)
-
-Rules:
-
-1) UTF-8 encoding.
-2) Deterministic key ordering (lexicographic) at all object levels.
-3) Minified JSON (no insignificant whitespace).
-4) Numbers:
-    - use JSON numbers (not strings) when numeric
-    - forbid `NaN`, `Infinity`, `-Infinity`
-5) Strings:
-    - normalize newlines to `\n`
-    - trim leading/trailing whitespace where semantics do not require it
-6) Arrays preserve order; if a set is intended, the DSL must sort explicitly.
-
-### 3.2 Canonicalization for SQL WHERE-suffix (`group_sql`)
-
-Used for:
-
-- `group_signature`
-
-Rules:
-
-1) Reject unsafe constructs:
-    - no `;`, no multiple statements, no comments, no DDL/DML keywords.
-2) Normalize whitespace:
-    - collapse whitespace runs to single spaces
-    - trim ends
-3) Normalize keyword casing:
-    - uppercase SQL keywords (`AND`, `OR`, `IN`, `SELECT`, `FROM`, `ORDER BY`, `LIMIT`, etc.)
-4) Identifier casing:
-    - preserve quoted identifier case
-    - otherwise treat identifiers as lower-case
-5) Parentheses:
-    - preserve as written unless AST canonicalization is enabled.
-
-If the wrapper supports a SQL AST parser (preferred):
-
-- sort commutative boolean operands (`AND` and `OR`) by their serialized canonical form
-- sort pure-literal `IN (...)` lists where semantics permit
-
-### 3.3 Canonicalization for Theory SQL-rule DSL (if you choose SQL instead of JSON)
-
-If `theory_dsl` is represented as SQL-rule DSL, the wrapper must:
-
-- apply SQL canonicalization rules (similar to above)
-- hash the full canonical rule set (including object definitions if used)
-
-### 3.4 Canonical signature fields
-
-- `group_signature = sha256(canonical_sql(group_sql))`
-- `hypothesis_signature = sha256(canonical_json(hypothesis_dsl))`
-- `theory_signature = sha256(canonical_json(theory_dsl))` (or canonical SQL-rule DSL)
-
----
-
-## 4) Notes on what belongs elsewhere
-
-- **Artifact formats** (exact JSON output schema, required fields, filenames, where to write files) are defined in:
-    - the OpenEvolve prompt (`prompts/l1/prompt.md`), not in this file.
-- **Objective functions**, scoring weights, thresholds, holdout split definition, acceptance gates:
-    - belong to OpenEvolve prompt.
-
----
-
-## 5) Compliance
-
-Agents must treat these rules as **non-overridable** unless the repository owners update `AGENTS.md`.  
-If the OpenEvolve prompt conflicts with this constitution, **AGENTS.md wins** and the agent must surface the conflict in
-its output notes.

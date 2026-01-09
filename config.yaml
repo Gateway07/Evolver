@@ -1,0 +1,34 @@
+optillm:
+  base_url: "http://localhost:8000/v1"
+  chat_completions_path: "/chat/completions"
+  model: "codex-cli-local"
+  timeout_seconds: 120
+  max_retries: 2
+
+codex_cli:
+  command: ["codex", "exec", "--json"]
+  timeout_seconds: 600
+
+schemas:
+  l1_schema_dir: "agents/prompts/L1/dsl"
+  l1_root_schema: "l1_output.schema.json"
+
+evaluator:
+  enable_artifacts: true
+  artifacts_dir: "artifacts"
+  iterations_dir: "artifacts/iterations"
+  iterations_index: "artifacts/iterations/index.json"
+  state_dir: "artifacts/state"
+  state_summary: "artifacts/state/summary.json"
+
+prompt:
+  initial_prompt_path: "src/prompt.md"
+  constitution_path: "agents/AGENTS.md"
+  include_artifacts: true
+  seed_examples:
+    - "src/sample1.md"
+
+open_evolve:
+  max_iterations: 10
+  locale: "en_US"
+  seed: 1337
