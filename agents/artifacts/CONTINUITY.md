@@ -1,0 +1,13 @@
+- Goal (incl. success criteria):
+    - Establish session state and await user task for Evolver repo while following AGENTS constraints.
+- Constraints/Assumptions:
+    - Follow `agents/AGENTS.md`.
+    - Use tool skills for `curl.exe` and `psql.exe` when needed (per AGENTS).
+    - Network allowed only to localhost as specified by OpenEvolve prompt.
+- Key decisions:
+    - None yet.
+- Open questions (UNCONFIRMED if needed):
+    - None.
+- Working set (files/ids/commands):
+    - agents/AGENTS.md
+    - agents/prompts/CONTINUITY.md

@@ -1,13 +1,22 @@
-# OpenEvolve L1 Prompt — Counterexample Discovery + Theory Modeling (Address Search)
+# OpenEvolve L0 Prompt — Counterexample Discovery + Theory Modeling (Address Search)
 
-This prompt defines the **Level L1** OpenEvolve loop for discovering **systematic NotFound counterexamples** in an
+This prompt defines the **Level L0** OpenEvolve loop for discovering **systematic NotFound counterexamples** in an
 core address-search Java application (`android`). Analyze application code to understand the search process and identify
-potential sources of errors/bugs and producing the following **artifacts** per iteration:
+potential sources of errors/bugs and producing the following **artifacts** as final JSON object which MUST conform to
+the Pydantic root model `evolver.level0.result_output.ResultOutputEnvelope`
+in [result_output.py](../../../evolver/level0/result_output.py).:
+On startup, also mandatory to load:
 
-1) **Experiment Model** (reality-backed “truth” about where the system fails)
-2) **Theory Model** (a formal, executable, higher-level theory that explains *why* it fails, simpler than Java code)
-   You MUST operate within the axioms, database schema, tracing workflow, application code and evaluator described
-   below.
+- [osmand_ddl.md](../osmand_ddl.md)
+-
+
+## Repo map
+
+### Project roots
+
+- `android/` — Main Java application code for investigation and core search functionality (search index building and
+  search itself).
+- `tools/` — Supplementary Tools Java application code and related modules.
 
 ## Axioms (Non-negotiable)
 
@@ -28,12 +37,12 @@ potential sources of errors/bugs and producing the following **artifacts** per i
 
 ### Axiom A3 — The evaluator is the system under test
 
-- You do not need to create unit-tests at L1.
+- You do not need to create unit-tests at L0.
 - You measure reality via the evaluator REST endpoint (aggregated metrics + run artifacts in DB).
 
 ## Database “Test Reality” (Read-only "osmand" schema)
 
-You have the following key objects (not exhaustive): [prompts/osmand_ddl.md](osmand_ddl.md)
+You have the following key objects (not exhaustive): [osmand_ddl.md](../osmand_ddl.md)
 
 - `osmand.city(id, name, state, country, lat, lon)`
 - `osmand.street(id, name, city_id, lat, lon)`
@@ -56,7 +65,7 @@ You have the following key objects (not exhaustive): [prompts/osmand_ddl.md](osm
 
 ### Response (JSON, aggregated)
 
-Evaluator returns aggregated metrics used for scoring L1 candidates:
+Evaluator returns aggregated metrics used for scoring L0 candidates:
 `runId, error, status, totalCount, failedCount, foundCount, partialFoundCount, totalDurationMs, totalBytes, searchDurationMs`
 
 ### Derived quantities
@@ -73,8 +82,8 @@ Your goal to maximize:
 
 ## Tracing API (Discovery mechanism via runtime variables)
 
-Use [tracing.md](../skills/curl/tracing.md) to observe runtime variables and validate/derive experiment and
-theory hypotheses without unit-tests.
+Use [tracing.md](../../skills/curl/tracing.md) to observe runtime variables and validate/derive experiment and theory
+hypotheses without unit-tests.
 
 ### Tracing usage
 
@@ -93,16 +102,11 @@ theory hypotheses without unit-tests.
 
 ## Mandatory code investigation + tracing grounding (NOT OPTIONAL)
 
-L1 MUST NOT propose a Theory purely from data correlations. For every accepted Theory candidate, L1 MUST follow:
+L0 MUST NOT propose a Theory purely from data correlations. For every accepted Theory candidate, MUST follow:
 
 ### Step C1) Code investigation (required)
 
-- Identify and inspect the code locations responsible for:
-    1) tokenization / normalization
-    2) stop-word filtering (if any)
-    3) prefix indexing strategy (e.g., prefix-4)
-    4) candidate retrieval
-    5) ranking / pruning / top-N truncation
+- Identify and inspect the code
 - Output in Theory:
     - `code_evidence.targets[]`: list of files/classes/methods inspected (placeholders allowed)
     - `code_evidence.observations[]`: concrete behavioral statements derived from code reading
@@ -115,9 +119,14 @@ L1 MUST NOT propose a Theory purely from data correlations. For every accepted T
     - key runtime variables observed
 - The Theory MUST state at least one confirmed alignment between surrogate features and runtime variables.
 
-## L1 Output Contract (MUST produce Experiment & Theory artifacts)
+## L0 Output Contract (MUST produce Experiment & Theory artifacts)
 
-For each L1 iteration, you MUST return a single JSON object (as text) with two top-level sections:
+For each L0 iteration, you MUST return a single JSON object (as text) with two top-level sections:
+
+1) **Experiment Model** (reality-backed “truth” about where the system fails)
+2) **Theory Model** (a formal, executable, higher-level theory that explains *why* it fails, simpler than Java code)
+   You MUST operate within the axioms, database schema, tracing workflow, application code and evaluator. See below L0
+   Output Contract for more details.
 
 ### 1) Experiment (facts-observation model to answer what and where questions)
 
@@ -158,10 +167,10 @@ Includes:
     - expected monotonic relationships (e.g., collision ↑ → NotFoundRate ↑)
 - `theory_validation_plan`:
     - (MANDATORY) evaluate predictive power on HOLDOUT states/countries (split policy REQUIRED)
-    - (MANDATORY) avoid selection bias with a FIXED evaluation protocol independent of L1-selected groups:
+    - (MANDATORY) avoid selection bias with a FIXED evaluation protocol independent of selected groups:
         - `holdout_control_sample`: stratified random by `city_id`
         - `holdout_feature_bins`: fixed bins (e.g., collision quantiles, token length buckets)
-    - L1 MUST NOT do active “group search” on HOLDOUT; HOLDOUT is scoring-only.
+    - L0 MUST NOT do active “group search” on HOLDOUT; HOLDOUT is scoring-only.
 - `tracing_evidence`:
     - tracingId(s), experiment runId(s)
     - key traced variables used to justify/fit the theory
@@ -185,9 +194,9 @@ The Theory output MUST include:
     - `trace_alignment`: which traced variables correlate with which surrogate features
     - `holdout_scoring`: theory metrics on holdout (scoring-only)
 
-## Multi-objective L1 Goals (Optimize both Experiment & Theory)
+## Multi-objective L0 Goals (Optimize both Experiment & Theory)
 
-L1 is a **multi-objective search**:
+L0 is a **multi-objective search**:
 
 ### Objective E (Experiment discovery quality)
 
@@ -318,18 +327,18 @@ A candidate group/hypothesis is admitted as an accepted “fact” only if:
 - reproduced on multiple runs (configurable N)
 - AND (new reason cluster OR new feature-space region/bin OR stronger refinement with higher effect size)
 
-## Database write policy for L1 (schema discipline)
+## Database write policy for L0 (schema discipline)
 
-- The `osmand` schema is READ-ONLY for L1.
-- L1 SHOULD prefer CTEs and derived queries.
-- L1 MAY create new DB entities ONLY to represent and accelerate Theory (Mechanism) computation, under strict rules:
+- The `osmand` schema is READ-ONLY for L0.
+- L0 SHOULD prefer CTEs and derived queries.
+- L0 MAY create new DB entities ONLY to represent and accelerate Theory (Mechanism) computation, under strict rules:
     1) New schemas MUST be separate from `osmand`, named:
         - `theory-{theory_name}-{sig8}-v{N}` (naming convention; wrapper computes N; placeholder)
     2) Schemas are IMMUTABLE once created (no CREATE OR REPLACE; no mutation).
     3) Default allowed objects: VIEW only.
         - MATERIALIZED VIEW only if explicitly enabled (placeholder) and refresh is deterministic.
     4) Theory schemas used for prediction MUST NOT depend on `osmand.run` or `osmand.run_result` (no label leakage).
-    5) L1 MUST output `theory_manifest.sql` (ordered DDL for created objects) and `theory_signature`.
+    5) L0 MUST output `theory_manifest.sql` (ordered DDL for created objects) and `theory_signature`.
     6) If schema exists for same theory_signature → reuse; otherwise create a new one.
 
 ## Theory Build Budget (REQUIRED)
@@ -341,8 +350,8 @@ To keep surrogate builds practical and reproducible, every Theory that uses DB m
 - Max materialized views per theory schema: `{BUDGET_MAX_MV}` (placeholder, e.g. 0–2)
 - Each object MUST have deterministic definitions (no `now()`, no `random()`, no dependence on run tables for
   prediction).
-- If performance is a concern, provide:
-    - `performance_evidence`: top expensive query signatures and (optional) `EXPLAIN` excerpts (placeholders allowed)
+- If performance is a concern, provide `performance_evidence`: top expensive query signatures and (optional) `EXPLAIN`
+  excerpts (placeholders allowed)
 
 ## Complexity Ladder for surrogate mechanisms (REQUIRED)
 
@@ -350,37 +359,30 @@ Every Theory MUST declare a ladder level and SHOULD advance only when necessary.
 
 Levels (in increasing sophistication):
 
-- L0: Pure group_sql filters over `osmand.address` (Reality only; insufficient for Mechanism acceptance by itself).
-- L1: Derived feature views (tokenization/normalization + prefix transforms).
-- L2: Frequency statistics (df/idf-like tables or views: head/tail df, min-tail-df, stop-words).
-- L3: Candidate-size surrogate + pruning approximation (estimated candidate explosion, top-N truncation logic).
-- L4: Multi-stage mechanism with reason_family mapping aligned to tracing (predicts both NotFound risk and reason
-  families).
+#0: Pure group_sql filters over `osmand.address` (Reality only; insufficient for Mechanism acceptance by itself).
+#1: Derived feature views (tokenization/normalization + prefix transforms).
+#2: Frequency statistics (df/idf-like tables or views: head/tail df, min-tail-df, stop-words).
+#3: Candidate-size surrogate + pruning approximation (estimated candidate explosion, top-N truncation logic).
+#4: Multi-stage mechanism with reason_family mapping aligned to tracing (predicts both NotFound risk and reason
+families).
 
 Rules:
 
-- A Theory intended for acceptance MUST be at least L1.
-- To claim pruning/top-N behavior, you MUST be L3+ and show tracing alignment.
+- A Theory intended for acceptance MUST be at least #1.
+- To claim pruning/top-N behavior, you MUST be #3+ and show tracing alignment.
 
 ## How to Run the Example (Operational sequence)
 
-0. (Required) Code investigation:
-    - inspect tokenizer/normalizer, stop-words, prefix strategy, candidate retrieval, ranking/pruning.
-1. (Required) Decide surrogate ladder level (L1–L4) and define surrogate features/invariants.
+0. (Required) Code investigation.
+1. (Required) Decide surrogate ladder level (#1–4) and define surrogate features/invariants.
 2. Use psql.exe to compute features/samples using CTEs/derived queries (preferred).
 3. If needed for Theory acceleration, create IMMUTABLE theory schema objects (views; optional materialized views) under
    the DB write policy and build budget above.
 4. Use psql.exe to generate candidate group_sql (WHERE-suffix) and CONTROL sampling SQL (stratified by city_id).
-5. Call evaluator with curl.exe (GET-with-body is REQUIRED):
-
-- MUST use `-X GET` and `--data-binary` (or `--data-raw`) to send the WHERE-suffix body.
-- Example (placeholder header):
-  `curl -i -X GET "http://localhost:8080/admin/search-test/search-by-sql" -H "{TRACING_HEADER}: {tracingId}" --data-binary "{group_sql}"`
-- analyze aggregated metrics and link to osmand.run (by using returned run_id).
-
+5. (Required) Call evaluator with curl.exe:
 6. Repeat runs for reproducibility checks (REPEAT_RUNS).
 5. Cluster res_error from osmand.run_result into reason_family (placeholder rules).
-7. Tracing (Required for Mechanism acceptance):
+7. (Required) Tracing for Theory acceptance:
 
 - create tracing tracingId, set breakpoints, run traced evaluator requests, fetch logs
 - extract runtime variables to validate surrogate invariants and mechanism claims
