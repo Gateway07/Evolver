@@ -125,10 +125,10 @@ def _extract_prompt_placeholders(prompt_text: str) -> set[str]:
 
 
 def _resolve_prompt_params(
-    *,
-    required_keys: set[str],
-    config: dict[str, Any],
-    runtime_params: dict[str, Any] | None,
+        *,
+        required_keys: set[str],
+        config: dict[str, Any],
+        runtime_params: dict[str, Any] | None,
 ) -> dict[str, Any]:
     resolved: dict[str, Any] = {}
 
@@ -201,7 +201,7 @@ def _append_prompt_params_suffix(*, prompt_text: str, required_keys: set[str], r
     return prompt_text.rstrip() + "\n" + "\n".join(lines) + "\n"
 
 
-def run(prompt_text: str, params: dict[str, Any] | None = None) -> Tuple[str, int]:
+def run(iteration_id: str, prompt_text: str, params: dict[str, Any] | None = None) -> Tuple[str, int]:
     config = _load_config()
 
     cmd = ["codex", "exec", "--json"]

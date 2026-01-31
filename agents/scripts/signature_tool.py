@@ -3,7 +3,7 @@ import hashlib
 import json
 import re
 import sys
-from typing import Any, Iterable
+from typing import Any
 
 
 def _sha256_hex(data: bytes) -> str:
@@ -37,149 +37,11 @@ def canonicalize_json_text(json_text: str) -> str:
     )
 
 
-_UNSAFE_SQL_PATTERNS: tuple[tuple[str, str], ...] = (
-    ("semicolon", r";"),
-    ("line_comment", r"--"),
-    ("block_comment_start", r"/\\*"),
-    ("block_comment_end", r"\\*/"),
-)
-
-_UNSAFE_SQL_KEYWORDS = (
-    "DROP",
-    "DELETE",
-    "UPDATE",
-    "INSERT",
-    "ALTER",
-    "CREATE",
-    "TRUNCATE",
-    "COPY",
-    "CALL",
-    "DO",
-)
-
-_SQL_KEYWORDS_TO_UPPER = (
-    "AND",
-    "OR",
-    "IN",
-    "NOT",
-    "NULL",
-    "IS",
-    "LIKE",
-    "ILIKE",
-    "BETWEEN",
-    "EXISTS",
-    "SELECT",
-    "FROM",
-    "WHERE",
-    "ORDER",
-    "BY",
-    "LIMIT",
-    "OFFSET",
-    "JOIN",
-    "INNER",
-    "LEFT",
-    "RIGHT",
-    "FULL",
-    "ON",
-    "AS",
-    "CASE",
-    "WHEN",
-    "THEN",
-    "ELSE",
-    "END",
-)
-
-
-def _split_by_sql_string_literals(sql: str) -> Iterable[tuple[bool, str]]:
-    i = 0
-    n = len(sql)
-    in_single = False
-    in_double = False
-    current: list[str] = []
-
-    def flush(is_literal: bool) -> tuple[bool, str] | None:
-        if not current:
-            return None
-        part = "".join(current)
-        current.clear()
-        return (is_literal, part)
-
-    while i < n:
-        ch = sql[i]
-
-        if in_single:
-            current.append(ch)
-            if ch == "'":
-                if i + 1 < n and sql[i + 1] == "'":
-                    current.append(sql[i + 1])
-                    i += 2
-                    continue
-                in_single = False
-            i += 1
-            continue
-
-        if in_double:
-            current.append(ch)
-            if ch == '"':
-                if i + 1 < n and sql[i + 1] == '"':
-                    current.append(sql[i + 1])
-                    i += 2
-                    continue
-                in_double = False
-            i += 1
-            continue
-
-        if ch == "'":
-            flushed = flush(is_literal=False)
-            if flushed is not None:
-                yield flushed
-            in_single = True
-            current.append(ch)
-            i += 1
-            continue
-
-        if ch == '"':
-            flushed = flush(is_literal=False)
-            if flushed is not None:
-                yield flushed
-            in_double = True
-            current.append(ch)
-            i += 1
-            continue
-
-        current.append(ch)
-        i += 1
-
-    flushed = flush(is_literal=in_single or in_double)
-    if flushed is not None:
-        yield flushed
-
-
-def canonicalize_where_sql(sql: str, *, uppercase_keywords: bool) -> str:
-    for label, pattern in _UNSAFE_SQL_PATTERNS:
-        if re.search(pattern, sql):
-            raise ValueError(f"Unsafe SQL: contains {label}")
-
+def canonicalize_where_sql(sql: str) -> str:
     upper_sql = sql.upper()
-    for kw in _UNSAFE_SQL_KEYWORDS:
-        if re.search(rf"\\b{re.escape(kw)}\\b", upper_sql):
-            raise ValueError(f"Unsafe SQL: contains keyword {kw}")
 
-    collapsed = re.sub(r"\\s+", " ", sql).strip()
-
-    if not uppercase_keywords:
-        return collapsed
-
-    keyword_pattern = r"\\b(" + "|".join(re.escape(k) for k in _SQL_KEYWORDS_TO_UPPER) + r")\\b"
-
-    parts: list[str] = []
-    for is_literal, segment in _split_by_sql_string_literals(collapsed):
-        if is_literal:
-            parts.append(segment)
-            continue
-        parts.append(re.sub(keyword_pattern, lambda m: m.group(1).upper(), segment, flags=re.IGNORECASE))
-
-    return "".join(parts)
+    collapsed = re.sub(r"\\s+", " ", upper_sql).strip()
+    return collapsed
 
 
 def _read_text_from_file_or_stdin(*, file_path: str | None) -> str:
@@ -209,7 +71,6 @@ def main(argv: list[str]) -> int:
     sql_parser = subparsers.add_parser("sql", help="Canonicalize SQL WHERE-suffix and compute sha256")
     sql_parser.add_argument("--file", dest="file_path", default=None)
     sql_parser.add_argument("--out", dest="out_path", default=None)
-    sql_parser.add_argument("--uppercase-keywords", action="store_true", default=False)
     sql_parser.add_argument("--print-canonical", action="store_true", default=False)
 
     args = parser.parse_args(argv)
@@ -219,7 +80,7 @@ def main(argv: list[str]) -> int:
     if args.mode == "json":
         canonical = canonicalize_json_text(raw_text)
     elif args.mode == "sql":
-        canonical = canonicalize_where_sql(raw_text, uppercase_keywords=bool(args.uppercase_keywords))
+        canonical = canonicalize_where_sql(raw_text)
     else:
         raise ValueError(f"Unknown mode: {args.mode}")
 

@@ -1,19 +1,21 @@
 codex_cli:
   timeout_seconds: 6000
-  prompt_params:
-    MECH_MIN_TRACING_RUNS: 2
-    SURROGATE_LADDER_LEVELS: "#1,#2,#3,#4"
-    MECH_METRICS: "AUC,F1"
-    MECH_MIN_FACTS_EXPLAINED: 3
-    MECH_MAX_FEATURES: 12
-    MECH_MAX_STEPS: 24
-    BUDGET_MAX_SCHEMAS: 1
-    BUDGET_MAX_OBJECTS: 20
-    BUDGET_MAX_MV: 0
-    projects:
-      android:
-        - "net.osmand.binary..*"
-        - "net.osmand.data..*"
-        - "net.osmand.search..*"
-      tools:
-        -
+prompt_params:
+  REPEAT_RUNS: 2
+  MECH_MIN_TRACING_RUNS: 2
+  SURROGATE_LADDER_LEVELS: "#1,#2,#3,#4"
+  MECH_METRICS: "AUC,F1"
+  MECH_MIN_FACTS_EXPLAINED: 3
+  MECH_MAX_FEATURES: 12
+  MECH_MAX_STEPS: 24
+  BUDGET_MAX_SCHEMAS: 1
+  BUDGET_MAX_OBJECTS: 20
+  BUDGET_MAX_MV: 0
+  TRACING_PACKAGES:
+    android:
+      - "net.osmand.binary..*"
+      - "net.osmand.data..*"
+      - "net.osmand.search..*"
+    tools:
+      -
+  AREA_OF_INVESTIGATION: "osmand index structure and its key properties for search"

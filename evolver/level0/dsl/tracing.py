@@ -4,8 +4,7 @@ from typing import Annotated, Dict, List, Literal, Optional
 
 from pydantic import Field
 
-from .base import DslBaseModel, JsonStrDict
-
+from evolver.level0.base_model import DslBaseModel, JsonStrDict
 
 SpelExpression = Annotated[
     str,
@@ -13,11 +12,11 @@ SpelExpression = Annotated[
         min_length=1,
         max_length=2000,
         description=(
-            "Spring Expression Language (SpEL) expression. The evaluation context uses: root object = 'this' "
-            "(the intercepted instance); variables: method parameters by name; 'return' is available for AFTER "
-            "expressions (method result); 'throw' is available for ON_ERROR expressions (exception). The evaluated "
-            "value is serialized using the configured Options (container size limits, object field representation, "
-            "and max depth)."
+            """Spring Expression Language (SpEL) expression. The evaluation context uses: root object = 'this' 
+            (the intercepted instance); variables: method parameters by name; 'return' is available for AFTER 
+            expressions (method result); 'throw' is available for ON_ERROR expressions (exception). The evaluated 
+            value is serialized using the configured Options (container size limits, object field representation, 
+            and max depth)."""
         ),
     ),
 ]
@@ -33,11 +32,11 @@ class TracingOptions(DslBaseModel):
     sizeLimitPerContainerClass: Optional[Dict[str, int]] = Field(
         default=None,
         description=(
-            "Container/array size limiting rules used when rendering values. Key: fully-qualified Java class name of "
-            "the container type (e.g. java.util.List, java.util.Map). Value semantics: if a class key is absent, the "
-            "adapter defaults to limiting that container class to 10 elements/entries; if present and value < 0, "
-            "traversal stops for that container (it is not expanded); if present and value >= 0, expansion is "
-            "limited to that many elements/entries."
+            """Container/array size limiting rules used when rendering values. Key: fully-qualified Java class name of 
+            the container type (e.g. java.util.List, java.util.Map). Value semantics: if a class key is absent, the 
+            adapter defaults to limiting that container class to 10 elements/entries; if present and value < 0, 
+            traversal stops for that container (it is not expanded); if present and value >= 0, expansion is 
+            limited to that many elements/entries."""
         ),
     )
     objectRepresentationPerClass: Optional[Dict[str, ObjectRepresentation]] = Field(
@@ -166,7 +165,7 @@ class TracingRecord(DslBaseModel):
 
 
 class TracingSession(DslBaseModel):
-    tracing_id: str = Field(max_length=128)
+    tracing_id: str = Field(max_length=16)
     breakpoints: List[BreakPoint] = Field(
         default_factory=list,
         max_length=16,

@@ -1,7 +1,7 @@
 import json
-import os
 import shutil
 import unittest
+from pathlib import Path
 
 from plugins import codex_cli_plugin
 
@@ -57,18 +57,14 @@ class TestCodexCliPlugin(unittest.TestCase):
         self.assertIn("tracingId=abc", final_text)
 
     def test_extract_final_json_text(self) -> None:
-        if os.environ.get("EVOLVER_RUN_CODEX_INTEGRATION_TESTS") != "1":
-            self.skipTest("Set EVOLVER_RUN_CODEX_INTEGRATION_TESTS=1 to run codex integration tests")
-
         if shutil.which("codex") is None:
             self.skipTest("'codex' executable not found on PATH")
 
-        prompt = """
-Analyze application code in 'android' project to understand the search process and find counterexamples.
-Test them by using Tracing API based on declared policy. 
-As result mandatory produce required final JSON object to follow L1 Output Contract."""
+        repo_root = Path(__file__).resolve().parent.parent
+        prompt_path = repo_root / "agents" / "prompts" / "L0" / "open_evolve_prompt.md"
+        prompt = prompt_path.read_text(encoding="utf-8")
 
-        extracted, code = codex_cli_plugin.run(prompt)
+        extracted, code = codex_cli_plugin.run("test-1", prompt)
         print(extracted)
 
         self.assertEqual(code, 0)
