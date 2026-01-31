@@ -5,7 +5,7 @@
 Use `psql.exe` via the provided skill to connect target database on local machine by using following command:
 
 ```powershell
-psql -d osmanddb
+psql -d appdb
 ```
 
 ## What psql is

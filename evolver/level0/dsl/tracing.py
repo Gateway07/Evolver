@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Annotated, Dict, List, Literal, Optional
 
-from pydantic import Field
-
 from evolver.level0.base_model import DslBaseModel, JsonStrDict
+from pydantic import Field
 
 SpelExpression = Annotated[
     str,
@@ -113,7 +112,7 @@ class BreakPoint(DslBaseModel):
 TracingPhase = Literal["CALL", "ERROR"]
 
 
-class TracingRecord(DslBaseModel):
+class Tracing(DslBaseModel):
     phase: TracingPhase = Field(
         description=(
             "Tracing record phase. CALL indicates a normal call tracing record; ERROR indicates an error-path record."
@@ -155,7 +154,7 @@ class TracingRecord(DslBaseModel):
     )
     timestampMs: int = Field(ge=0, description="Record timestamp in milliseconds since epoch.")
     durationMs: int = Field(ge=0, description="Duration of the intercepted call in milliseconds.")
-    thenTracings: Optional[List[TracingRecord]] = Field(
+    thenTracings: Optional[List[Tracing]] = Field(
         default=None,
         max_length=10,
         description=(
@@ -175,7 +174,7 @@ class TracingSession(DslBaseModel):
             "and its ifConditionExpression evaluated to true."
         ),
     )
-    tracings: List[TracingRecord] = Field(
+    tracings: List[Tracing] = Field(
         default_factory=list,
         max_length=100000,
         description=(

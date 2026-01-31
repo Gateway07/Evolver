@@ -28,7 +28,7 @@ class QueryDefinition(Proposal):
         max_length=20000,
         description=(
             "Canonical concrete address cohort selector expressed as a SQL WHERE-suffix "
-            "predicate over alias 'a' (osmand.address)."
+            "predicate over alias 'a' (app.address)."
         ),
     )
 
